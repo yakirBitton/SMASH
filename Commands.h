@@ -9,6 +9,10 @@
 class Command {
 // TODO: Add your data members
  public:
+	char* args[COMMAND_MAX_ARGS];
+	int args_num = 0;
+	const char * cmd_line;
+	
   Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
@@ -84,8 +88,22 @@ class JobsList {
  public:
   class JobEntry {
    // TODO: Add your data members
+   public:
+	string cmd;
+	pid_t pid;
+	time_t add_time;
+	time_t stop_time;
+	sring status;
+	
+	JobEntry(){
+		add_time = 0;
+		pid = 0;
+		status = "unfinished";
+	}
   };
- // TODO: Add your data members
+  
+ // TODO: Add your data members 
+ //צריך לבחור באיזה מבנה נתונים להשתמש כדי לתחזק את הרשימה של העבודות
  public:
   JobsList();
   ~JobsList();
@@ -145,6 +163,12 @@ class SmallShell {
   // TODO: Add your data members
   SmallShell();
  public:
+	string cmd_line;
+	
+	int smash_pid;//this is the smash pid
+	JobsList jobs_list;
+	string curr_cmd_prompt; 
+	
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
   void operator=(SmallShell const&)  = delete; // disable = operator

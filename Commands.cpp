@@ -79,6 +79,9 @@ void _removeBackgroundSign(char* cmd_line) {
 
 SmallShell::SmallShell() {
 // TODO: add your implementation
+	pid = getpid();
+	jobslist = JobsList();
+	curr_cmd_prompt = "smash";
 }
 
 SmallShell::~SmallShell() {
@@ -90,29 +93,53 @@ SmallShell::~SmallShell() {
 */
 Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
-/*
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
-
-  if (firstWord.compare("pwd") == 0) {
+  
+  if(string(cmd_line).find("|") != string::npos){
+		return new PipeCommand(cmd_line);
+  }
+  else if(string(cmd_line).find(">") != string::npos){
+	  return new RedirectionCommand(cmd_line);
+  }
+  else if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
   else if (firstWord.compare("showpid") == 0) {
     return new ShowPidCommand(cmd_line);
   }
-  else if ...
-  .....
+  else if (firstWord.compare("chprompt") == 0) {
+    return new ChangePromptCommand(cmd_line);
+  }
+  else if (firstWord.compare("cd") == 0) {
+    return new ChangeDirCommand(cmd_line);
+  }
+  else if (firstWord.compare("jobs") == 0) {
+    return new JobsCommand(cmd_line);
+  }
+  else if (firstWord.compare("kill") == 0) {
+    return new KillCommand(cmd_line);
+  }
+  else if (firstWord.compare("fg") == 0) {
+    return new ForegroundCommand(cmd_line);
+  }
+  else if (firstWord.compare("bg") == 0) {
+    return new BackgroundCommand(cmd_line);
+  }
+  else if (firstWord.compare("quit") == 0) {
+    return new QuitCommand(cmd_line);
+  }
   else {
     return new ExternalCommand(cmd_line);
   }
-  */
+  
   return nullptr;
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
   // TODO: Add your implementation here
   // for example:
-  // Command* cmd = CreateCommand(cmd_line);
-  // cmd->execute();
+	 Command* cmd = CreateCommand(cmd_line);
+     cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
