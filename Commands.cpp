@@ -2,6 +2,7 @@
 #include <string.h>
 #include <iostream>
 #include <vector>
+#include <map>
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
@@ -137,9 +138,51 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 }
 
 void SmallShell::executeCommand(const char *cmd_line) {
+
   // TODO: Add your implementation here
   // for example:
 	 Command* cmd = CreateCommand(cmd_line);
      cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
+}
+
+void JobsList::addJob(Command* cmd, bool isStopped){
+  removeFinishedJobs(); //First delete all finished jobs
+  int job_id;
+  SmallShell& smash = SmallShell::getInstance();
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+  bool is_empty = jobs_map.empty(); //check if the jobs list is empty
+  if(is_empty) {job_id = 1;}
+  else{job_id = jobs_map.rbegin() ->first +1;//returns the maximal job id since the map is sorted.
+  //initialization
+  jobs_map[job_id] = JobEntry();
+  jobs_map[job_id].pid = cmd->pid;
+  jobs_map[job_id].cmd = cmd->cmd_line;
+  jobs_map[job_id].add_time = time(nullptr);
+
+  if(isStopped){jobs_map[job_id].status = STOPPED;}
+  else{jobs_map[job_id].status = UNFINISHED;}
+  }
+}
+
+void JobsList::removeFinishedJobs(){
+  SmallShell& smash = SmallShell::getInstance();
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+  //map<int, JobsList::JobEntry>::iterator = jobs_map.begin();
+  auto it = jobs_map.begin();
+  JobsList::JobEntry job_entry = it->second;
+  while(it != jobs_map.end()){
+    if(waitpid(job_entry.pid, nullptr, WNOHANG) == job_entry.pid){
+      jobs_map.erase(it);
+      it++;
+    }
+    else{it++;}
+  }
+}
+
+
+void KillCommand::execute(){
+  SmallShell& smash = SmallShell::getInstance();
+  smash.jobs_list.removeFinishedJobs();
+  
 }

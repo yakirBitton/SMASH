@@ -2,9 +2,11 @@
 #define SMASH_COMMAND_H_
 
 #include <vector>
-
+#include <map>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+#define STOPPED (1)
+#define UNFINISHED (0)
 
 class Command {
 // TODO: Add your data members
@@ -12,7 +14,8 @@ class Command {
 	char* args[COMMAND_MAX_ARGS];
 	int args_num = 0;
 	const char * cmd_line;
-	
+	pid_t pid;
+
   Command(const char* cmd_line);
   virtual ~Command();
   virtual void execute() = 0;
@@ -86,33 +89,36 @@ class QuitCommand : public BuiltInCommand {
 
 class JobsList {
  public:
+  
   class JobEntry {
    // TODO: Add your data members
    public:
-	string cmd;
+	std::string cmd;
 	pid_t pid;
 	time_t add_time;
 	time_t stop_time;
-	sring status;
+	int status;
 	
-	JobEntry(){
-		add_time = 0;
-		pid = 0;
-		status = "unfinished";
-	}
+    JobEntry(){
+      add_time = 0;
+      pid = 0;
+      status = UNFINISHED;
+    }
   };
+
+  std::map<int, JobEntry> jobsMap;//A map to manage the jobs list
   
  // TODO: Add your data members 
  //צריך לבחור באיזה מבנה נתונים להשתמש כדי לתחזק את הרשימה של העבודות
  public:
   JobsList();
   ~JobsList();
-  void addJob(Command* cmd, bool isStopped = false);
+  void addJob(Command* cmd, bool isStopped = false);//completed
   void printJobsList();
   void killAllJobs();
-  void removeFinishedJobs();
-  JobEntry * getJobById(int jobId);
-  void removeJobById(int jobId);
+  void removeFinishedJobs();//completed
+  JobEntry * getJobById(int jobId);//we dont need it
+  void removeJobById(int jobId);//we dont need it
   JobEntry * getLastJob(int* lastJobId);
   JobEntry *getLastStoppedJob(int *jobId);
   // TODO: Add extra methods or modify exisitng ones as needed
@@ -163,11 +169,11 @@ class SmallShell {
   // TODO: Add your data members
   SmallShell();
  public:
-	string cmd_line;
+	std::string cmd_line;
 	
 	int smash_pid;//this is the smash pid
 	JobsList jobs_list;
-	string curr_cmd_prompt; 
+	std::string curr_cmd_prompt; 
 	
   Command *CreateCommand(const char* cmd_line);
   SmallShell(SmallShell const&)      = delete; // disable copy ctor
