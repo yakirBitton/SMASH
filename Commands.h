@@ -5,6 +5,7 @@
 #include <map>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
+#define UNLISTED (2)
 #define STOPPED (1)
 #define UNFINISHED (0)
 
@@ -109,7 +110,6 @@ class JobsList {
   std::map<int, JobEntry> jobsMap;//A map to manage the jobs list
   
  // TODO: Add your data members 
- //צריך לבחור באיזה מבנה נתונים להשתמש כדי לתחזק את הרשימה של העבודות
  public:
   JobsList();
   ~JobsList();

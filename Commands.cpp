@@ -180,9 +180,54 @@ void JobsList::removeFinishedJobs(){
   }
 }
 
+bool isNumber(const string& str){
+  for(char const &ch : str){
+    if (std::isdigit(ch) == false) return false;
+    return true;
+  }
+}
 
 void KillCommand::execute(){
+  int sig_num, job_id;
   SmallShell& smash = SmallShell::getInstance();
   smash.jobs_list.removeFinishedJobs();
-  
+  //check if the syntax is good
+  if(args_num != 3 || !isNumber(args[1]) || !isNumber(args[2]) || args[1][0] != '-'){
+    cerr << "smash error: kill: invalid arguments" << endl;
+    return;
+  }
+  sig_num = stoi(string(args[1]).substr(1));
+  job_id = stoi(args[2]);
+
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+  map<int, JobsList::JobEntry>::iterator it;
+  it = jobs_map.find(job_id);
+  if(it == jobs_map.end()){
+      cerr<<"smash error: kill: job_id " + to_string(job_id) + " does not exist"<<endl;
+      return;
+  }
+
+  if(kill(job_id, sig_num) == -1){
+    perror("smash error: kill failed");
+    return;
+  }
+
+  int pid = it->second.pid;
+
+  cout<<"signal number "<<sig_num<<" was sent to pid "<<pid<<endl;
+  smash.jobs_list.removeFinishedJobs();
+}
+
+void ForegroundCommand::execute(){
+  if(args_num >= 3 || !isNumber(args[1])){
+    cerr <<"smas error: fg: invalid arguments"<<endl;
+  }
+
+  SmallShell& smash = SmallShell::getInstance();
+  smash.jobs_list.removeFinishedJobs();
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+
+  if(args_num == 1){
+   
+  }
 }
