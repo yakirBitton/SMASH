@@ -220,14 +220,49 @@ void KillCommand::execute(){
 
 void ForegroundCommand::execute(){
   if(args_num >= 3 || !isNumber(args[1])){
-    cerr <<"smas error: fg: invalid arguments"<<endl;
+    cerr <<"smash error: fg: invalid arguments"<<endl;
   }
 
   SmallShell& smash = SmallShell::getInstance();
   smash.jobs_list.removeFinishedJobs();
   map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+  int job_id;
+  JobsList::JobEntry job;
 
-  if(args_num == 1){
-   
+  if(args_num == 1){//no specific job_id was specified.
+   if(smash.jobs_list.jobsMap.empty()){
+     cerr<<"smash error: fg:jobslist is empty"<<endl;
+     return;
+   }
+   job = smash.jobs_list.jobsMap.rbegin()->second;
+   job_id = smash.jobs_list.jobsMap.rbegin()->first;
   }
+
+  else{
+    job_id = stoi(args[1]);
+    std::map<int, JobsList::JobEntry>::iterator it;
+    it = jobs_map.find(job_id);
+    if(it == jobs_map.end()){
+      cerr<<"smash error: fg: job_id " << job_id << "does not exist"<<endl;
+      return;
+    }
+
+    job = it->second;
+  }
+    cout << job.cmd <<" : "<< job.pid <<endl;
+    if(kill(job.pid, SIGCONT) == -1){
+      perror("smash error: kill failed");
+      return;
+    }
+    //now the job has moved to fg so it moves to unlistedMap
+    map<int, JobsList::JobEntry>& unlisted_map = smash.jobs_list.unlistedMap;
+    std::map<int, JobsList::JobEntry>::iterator unlisted_it;
+    unlisted_it = unlisted_map.begin();
+    unlisted_map.insert(unlisted_it, std::pair<int, JobsList::JobEntry>(job_id,job));
+    //remove th fg job from the list.
+    smash.jobs_list.jobsMap.erase(job_id);
+    int wstatus = 0;
+    if(waitpid(job.pid, &wstatus, WUNTRACED) != job.pid){
+      perror("smash error: waitpid failed");
+    }
 }

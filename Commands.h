@@ -108,7 +108,7 @@ class JobsList {
   };
 
   std::map<int, JobEntry> jobsMap;//A map to manage the jobs list
-  
+  std::map<int, JobsList::JobEntry> unlistedMap;//A map for unlisted jobs which still run.
  // TODO: Add your data members 
  public:
   JobsList();
