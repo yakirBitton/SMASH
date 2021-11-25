@@ -225,6 +225,7 @@ void ForegroundCommand::execute(){
 
   SmallShell& smash = SmallShell::getInstance();
   smash.jobs_list.removeFinishedJobs();
+
   map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
   int job_id;
   JobsList::JobEntry job;
@@ -234,6 +235,7 @@ void ForegroundCommand::execute(){
      cerr<<"smash error: fg:jobslist is empty"<<endl;
      return;
    }
+
    job = smash.jobs_list.jobsMap.rbegin()->second;
    job_id = smash.jobs_list.jobsMap.rbegin()->first;
   }
@@ -254,12 +256,15 @@ void ForegroundCommand::execute(){
       perror("smash error: kill failed");
       return;
     }
+    smash.jobs_list.fgJob = job;
+    smash.jobs_list.fg_job_id = job.pid;
     //now the job has moved to fg so it moves to unlistedMap
-    map<int, JobsList::JobEntry>& unlisted_map = smash.jobs_list.unlistedMap;
+    /*map<int, JobsList::JobEntry>& unlisted_map = smash.jobs_list.unlistedMap;
     std::map<int, JobsList::JobEntry>::iterator unlisted_it;
     unlisted_it = unlisted_map.begin();
     unlisted_map.insert(unlisted_it, std::pair<int, JobsList::JobEntry>(job_id,job));
-    //remove th fg job from the list.
+    *///remove th fg job from the list.
+
     smash.jobs_list.jobsMap.erase(job_id);
     int wstatus = 0;
     if(waitpid(job.pid, &wstatus, WUNTRACED) != job.pid){

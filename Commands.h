@@ -106,9 +106,10 @@ class JobsList {
       status = UNFINISHED;
     }
   };
-
+  int fg_job_id;
+  JobEntry fgJob;
   std::map<int, JobEntry> jobsMap;//A map to manage the jobs list
-  std::map<int, JobsList::JobEntry> unlistedMap;//A map for unlisted jobs which still run.
+  //std::map<int, JobsList::JobEntry> unlistedMap;//A map for unlisted jobs which still run.
  // TODO: Add your data members 
  public:
   JobsList();
