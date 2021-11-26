@@ -232,7 +232,7 @@ void ForegroundCommand::execute(){
 
   if(args_num == 1){//no specific job_id was specified.
    if(smash.jobs_list.jobsMap.empty()){
-     cerr<<"smash error: fg:jobslist is empty"<<endl;
+     cerr<<"smash error: fg: jobslist is empty"<<endl;
      return;
    }
 
@@ -245,7 +245,7 @@ void ForegroundCommand::execute(){
     std::map<int, JobsList::JobEntry>::iterator it;
     it = jobs_map.find(job_id);
     if(it == jobs_map.end()){
-      cerr<<"smash error: fg: job_id " << job_id << "does not exist"<<endl;
+      cerr<<"smash error: fg: job-id " << job_id << "does not exist"<<endl;
       return;
     }
 
@@ -271,3 +271,70 @@ void ForegroundCommand::execute(){
       perror("smash error: waitpid failed");
     }
 }
+
+JobsList::JobEntry* JobsList::getLastStoppedJob(int* jobId){
+  SmallShell& smash = SmallShell::getInstance();
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+
+  //map<int, JobsList::JobEntry>::iterator it;
+  for(auto it = jobs_map.rbegin();it != jobs_map.rend(); it++){
+    if(it->second.status == STOPPED){
+      *jobId = it->first;
+      return &it->second;
+    }
+  }
+  return nullptr;
+}
+
+void BackgroundCommand::execute(){
+  int target_job_id;
+  JobsList::JobEntry target_job;
+  
+
+  if(args_num >= 3){
+    cerr<<"smash error:bg: invalid arguments";
+    return;
+  }
+
+  SmallShell& smash = SmallShell::getInstance();
+  smash.jobs_list.removeFinishedJobs();
+  map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
+
+
+
+  if(args_num == 2){
+    if(!isNumber(args[1])){
+      cerr<<"smash error:bg: invalid arguments";
+      return;
+      }
+
+      target_job_id = stoi(args[1]);
+      std::map<int, JobsList::JobEntry>::iterator it;
+      it = jobs_map.find(target_job_id);
+      if(it == jobs_map.end()){
+      cerr<<"smash error: bg: job-id " << target_job_id << "does not exist"<<endl;
+      return;
+      }
+      target_job = it->second;
+  }
+  else{
+    target_job = *smash.jobs_list.getLastStoppedJob(&target_job_id);
+    if(&target_job == nullptr){
+      cerr<<"smash error: bg: there are no stopped jobs to resume"<<endl;
+      return;
+    }
+  }
+      
+  if(target_job.status == UNFINISHED){
+      cerr<<"smash error: bg: job-id" << target_job_id <<" is already running in the background"<<endl;
+    }
+  
+  cout<<target_job.cmd<<" : "<<target_job.pid<<endl;
+  target_job.status = UNFINISHED;
+
+  if(kill(target_job.pid, SIGCONT) == -1){
+      perror("smash error: kill failed");
+      return;
+    }
+}
+

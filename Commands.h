@@ -121,7 +121,7 @@ class JobsList {
   JobEntry * getJobById(int jobId);//we dont need it
   void removeJobById(int jobId);//we dont need it
   JobEntry * getLastJob(int* lastJobId);
-  JobEntry *getLastStoppedJob(int *jobId);
+  JobEntry *getLastStoppedJob(int *jobId);//completed
   // TODO: Add extra methods or modify exisitng ones as needed
 };
 
