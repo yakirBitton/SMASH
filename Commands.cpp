@@ -80,8 +80,8 @@ void _removeBackgroundSign(char* cmd_line) {
 
 SmallShell::SmallShell() {
 // TODO: add your implementation
-	pid = getpid();
-	jobslist = JobsList();
+	smash_pid = getpid();
+	jobs_list = JobsList();
 	curr_cmd_prompt = "smash";
 }
 
@@ -145,6 +145,63 @@ void SmallShell::executeCommand(const char *cmd_line) {
      cmd->execute();
   // Please note that you must fork smash process for some commands (e.g., external commands....)
 }
+/*********************Command*****************************/
+Command::Command(const char *cmd_line) : cmd_line(cmd_line) {
+    char* arguments[COMMAND_ARGS_MAX_LENGTH];
+    args_num = _parseCommandLine(cmd_line, arguments);
+    for(int i = 0; i < args_num; i++){
+        args[i] = arguments[i];
+    }
+}
+
+Command::~Command(){
+    for(int i = 0; i < args_num; i++){
+        delete[] args[i];
+    }
+    SmallShell& smash = SmallShell::getInstance();
+    smash.jobs_list.fg_job_id = NO_FG_JOB;
+}
+/*********************built-in command********************/
+
+BuiltInCommand::BuiltInCommand(const char *cmd_line) : Command(cmd_line){}
+
+/*********************change prompt command***************/
+
+ChangePromptCommand::ChangePromptCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
+
+void ChangePromptCommand::execute(){
+    SmallShell& smash = SmallShell::getInstance();
+    if(this->args_num == 1){
+      smash.curr_cmd_prompt = "smash";
+    }
+    else{
+      smash.curr_cmd_prompt = args[1];
+    }
+}
+
+/*********************show pid command********************/
+
+ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
+
+void ShowPidCommand::execute(){
+    SmallShell& smash = SmallShell::getInstance();
+    cout << "smash pid is " << smash.smash_pid << endl;
+}
+
+/*********************pwd command*************************/
+
+GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
+
+void GetCurrDirCommand::execute(){
+    char* 
+    cout << getcwd() << endl;
+}
+
+
+/*********************change dir command******************/
+
+ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
 
 void JobsList::addJob(Command* cmd, bool isStopped){
   removeFinishedJobs(); //First delete all finished jobs

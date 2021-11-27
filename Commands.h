@@ -5,9 +5,13 @@
 #include <map>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
-#define UNLISTED (2)
-#define STOPPED (1)
-#define UNFINISHED (0)
+#define UNLISTED 2
+#define STOPPED 1
+#define UNFINISHED 0
+#define NO_FG_JOB -1
+const std::string WHITESPACE = " \n\r\t\f\v";
+
+
 
 class Command {
 // TODO: Add your data members
@@ -58,8 +62,15 @@ class RedirectionCommand : public Command {
 
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members public:
-  ChangeDirCommand(const char* cmd_line, char** plastPwd);
+  ChangeDirCommand(const char* cmd_line);
   virtual ~ChangeDirCommand() {}
+  void execute() override;
+};
+
+class ChangePromptCommand : public BuiltInCommand {
+// TODO: Add your data members public:
+  ChangePromptCommand(const char* cmd_line);
+  virtual ~ChangePromptCommand() {}
   void execute() override;
 };
 
@@ -80,7 +91,7 @@ class ShowPidCommand : public BuiltInCommand {
 class JobsList;
 class QuitCommand : public BuiltInCommand {
 // TODO: Add your data members public:
-  QuitCommand(const char* cmd_line, JobsList* jobs);
+  QuitCommand(const char* cmd_line);
   virtual ~QuitCommand() {}
   void execute() override;
 };
@@ -167,27 +178,27 @@ class HeadCommand : public BuiltInCommand {
 
 class SmallShell {
  private:
-  // TODO: Add your data members
-  SmallShell();
+    // TODO: Add your data members
+    SmallShell();
  public:
-	std::string cmd_line;
-	
-	int smash_pid;//this is the smash pid
-	JobsList jobs_list;
-	std::string curr_cmd_prompt; 
-	
-  Command *CreateCommand(const char* cmd_line);
-  SmallShell(SmallShell const&)      = delete; // disable copy ctor
-  void operator=(SmallShell const&)  = delete; // disable = operator
-  static SmallShell& getInstance() // make SmallShell singleton
-  {
-    static SmallShell instance; // Guaranteed to be destroyed.
-    // Instantiated on first use.
-    return instance;
-  }
-  ~SmallShell();
-  void executeCommand(const char* cmd_line);
-  // TODO: add extra methods as needed
+    std::string cmd_line;
+    int smash_pid;//this is the smash pid
+    JobsList jobs_list;
+    std::string curr_cmd_prompt;
+    char* lastPWD;
+    
+    Command *CreateCommand(const char* cmd_line);
+    SmallShell(SmallShell const&)      = delete; // disable copy ctor
+    void operator=(SmallShell const&)  = delete; // disable = operator
+    static SmallShell& getInstance() // make SmallShell singleton
+    {
+      static SmallShell instance; // Guaranteed to be destroyed.
+      // Instantiated on first use.
+      return instance;
+    }
+    ~SmallShell();
+    void executeCommand(const char* cmd_line);
+    // TODO: add extra methods as needed
 };
 
 #endif //SMASH_COMMAND_H_
