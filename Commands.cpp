@@ -192,10 +192,9 @@ void ShowPidCommand::execute(){
 
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
-void GetCurrDirCommand::execute(){
-    char* 
+/*void GetCurrDirCommand::execute(){
     cout << getcwd() << endl;
-}
+}*/
 
 
 /*********************change dir command******************/
@@ -395,3 +394,28 @@ void BackgroundCommand::execute(){
     }
 }
 
+void QuitCommand::execute(){
+  SmallShell& smash = SmallShell::getInstance();
+  smash.jobs_list.removeFinishedJobs();
+
+  for( int i=1; i<args_num;i++){
+    string arg = string(args[i]);
+    if(arg == "kill"){
+      cout << "smash: sending SIGKILL signal to " << smash.jobs_list.jobsMap.size() << "jobs"<<endl;
+      smash.jobs_list.killAllJobs();
+      break;
+    }
+  }
+  exit(0);
+}
+
+void JobsList::killAllJobs(){
+  SmallShell& smash = SmallShell::getInstance();
+  map<int, JobsList::JobEntry> jobs_map = smash.jobs_list.jobsMap;
+  map<int, JobsList::JobEntry>::iterator it = jobsMap.begin();
+  JobsList::JobEntry job;
+  for(it; it != jobs_map.end(); it++){
+    job = it->second;
+    cout<< job.pid << ": "<< job.cmd << endl;
+  }
+}
