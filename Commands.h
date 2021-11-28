@@ -35,7 +35,7 @@ class BuiltInCommand : public Command {
   virtual ~BuiltInCommand() {}
 };
 
-class ExternalCommand : public Command {
+/*class ExternalCommand : public Command {
  public:
   ExternalCommand(const char* cmd_line);
   virtual ~ExternalCommand() {}
@@ -58,17 +58,19 @@ class RedirectionCommand : public Command {
   void execute() override;
   //void prepare() override;
   //void cleanup() override;
-};
+};*/
 
 class ChangeDirCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+// TODO: Add your data members 
+public:
   ChangeDirCommand(const char* cmd_line);
   virtual ~ChangeDirCommand() {}
   void execute() override;
 };
 
 class ChangePromptCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+// TODO: Add your data members 
+public:
   ChangePromptCommand(const char* cmd_line);
   virtual ~ChangePromptCommand() {}
   void execute() override;
@@ -88,16 +90,53 @@ class ShowPidCommand : public BuiltInCommand {
   void execute() override;
 };
 
+class JobsCommand : public BuiltInCommand {
+ // TODO: Add your data members
+ public:
+  JobsCommand(const char* cmd_line);
+  virtual ~JobsCommand() {}
+  void execute() override;
+};
+
+class KillCommand : public BuiltInCommand {
+ // TODO: Add your data members
+ public:
+  KillCommand(const char* cmd_line);
+  virtual ~KillCommand() {}
+  void execute() override;
+};
+
+class ForegroundCommand : public BuiltInCommand {
+ // TODO: Add your data members
+ public:
+  ForegroundCommand(const char* cmd_line);
+  virtual ~ForegroundCommand() {}
+  void execute() override;
+};
+
+class BackgroundCommand : public BuiltInCommand {
+ // TODO: Add your data members
+public:
+  BackgroundCommand(const char* cmd_line);
+  virtual ~BackgroundCommand() {}
+  void execute() override;
+};
+
+class HeadCommand : public BuiltInCommand {
+ public:
+  HeadCommand(const char* cmd_line);
+  virtual ~HeadCommand() {}
+  void execute() override;
+};
+
 class JobsList;
 class QuitCommand : public BuiltInCommand {
-// TODO: Add your data members public:
+// TODO: Add your data members 
+public:
   QuitCommand(const char* cmd_line);
   virtual ~QuitCommand() {}
   void execute() override;
 };
-
-
-
 
 class JobsList {
  public:
@@ -121,8 +160,7 @@ class JobsList {
   JobEntry fgJob;
   std::map<int, JobEntry> jobsMap;//A map to manage the jobs list
   //std::map<int, JobsList::JobEntry> unlistedMap;//A map for unlisted jobs which still run.
- // TODO: Add your data members 
- public:
+ // TODO: Add your data members  public:
   JobsList();
   ~JobsList();
   void addJob(Command* cmd, bool isStopped = false);//completed
@@ -135,46 +173,6 @@ class JobsList {
   JobEntry *getLastStoppedJob(int *jobId);//completed
   // TODO: Add extra methods or modify exisitng ones as needed
 };
-
-class JobsCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  JobsCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~JobsCommand() {}
-  void execute() override;
-};
-
-class KillCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  KillCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~KillCommand() {}
-  void execute() override;
-};
-
-class ForegroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  ForegroundCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~ForegroundCommand() {}
-  void execute() override;
-};
-
-class BackgroundCommand : public BuiltInCommand {
- // TODO: Add your data members
- public:
-  BackgroundCommand(const char* cmd_line, JobsList* jobs);
-  virtual ~BackgroundCommand() {}
-  void execute() override;
-};
-
-class HeadCommand : public BuiltInCommand {
- public:
-  HeadCommand(const char* cmd_line);
-  virtual ~HeadCommand() {}
-  void execute() override;
-};
-
 
 class SmallShell {
  private:

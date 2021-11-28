@@ -6,16 +6,17 @@
 #include <sstream>
 #include <sys/wait.h>
 #include <iomanip>
+#include <time.h>
 #include "Commands.h"
 
 using namespace std;
 
 #if 0
 #define FUNC_ENTRY()  \
-  cout << __PRETTY_FUNCTION__ << " --> " << endl;
+  std::cout << __PRETTY_FUNCTION__ << " --> " << endl;
 
 #define FUNC_EXIT()  \
-  cout << __PRETTY_FUNCTION__ << " <-- " << endl;
+  std::cout << __PRETTY_FUNCTION__ << " <-- " << endl;
 #else
 #define FUNC_ENTRY()
 #define FUNC_EXIT()
@@ -78,15 +79,20 @@ void _removeBackgroundSign(char* cmd_line) {
 
 // TODO: Add your implementation for classes in Commands.h 
 
+JobsList::JobsList(){}
+JobsList::~JobsList(){}
+
 SmallShell::SmallShell() {
 // TODO: add your implementation
 	smash_pid = getpid();
 	jobs_list = JobsList();
 	curr_cmd_prompt = "smash";
+  lastPWD = (char*)malloc(COMMAND_ARGS_MAX_LENGTH);
 }
 
 SmallShell::~SmallShell() {
 // TODO: add your implementation
+  delete lastPWD;
 }
 
 /**
@@ -97,13 +103,13 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
   
-  if(string(cmd_line).find("|") != string::npos){
+  /*if(string(cmd_line).find("|") != string::npos){
 		return new PipeCommand(cmd_line);
   }
   else if(string(cmd_line).find(">") != string::npos){
 	  return new RedirectionCommand(cmd_line);
   }
-  else if (firstWord.compare("pwd") == 0) {
+  else*/ if (firstWord.compare("pwd") == 0) {
     return new GetCurrDirCommand(cmd_line);
   }
   else if (firstWord.compare("showpid") == 0) {
@@ -130,9 +136,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("quit") == 0) {
     return new QuitCommand(cmd_line);
   }
-  else {
+  /*else {
     return new ExternalCommand(cmd_line);
-  }
+  }*/
   
   return nullptr;
 }
@@ -185,22 +191,74 @@ ShowPidCommand::ShowPidCommand(const char *cmd_line) : BuiltInCommand(cmd_line){
 
 void ShowPidCommand::execute(){
     SmallShell& smash = SmallShell::getInstance();
-    cout << "smash pid is " << smash.smash_pid << endl;
+    std::cout << "smash pid is " << smash.smash_pid << endl;
 }
 
 /*********************pwd command*************************/
 
 GetCurrDirCommand::GetCurrDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line){}
 
-/*void GetCurrDirCommand::execute(){
-    cout << getcwd() << endl;
-}*/
+void GetCurrDirCommand::execute(){
+  char* pwd = get_current_dir_name();
+  if(pwd == nullptr){
+    perror("smash error: get_current_dir_name() failed");
+    return;
+  }
+  std::cout << pwd << endl;    
+  delete pwd;
+}
 
 
 /*********************change dir command******************/
 
 ChangeDirCommand::ChangeDirCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
+void ChangeDirCommand::execute(){
+    if(this->args_num > 2){
+      cerr << "smash error: cd: too many arguments" << endl;
+      return;
+    }
+    SmallShell& smash = SmallShell::getInstance();
+    char* dir = args[1];
+    char* pwd = get_current_dir_name();
+    if(pwd == nullptr){
+      perror("smash error: get_current_dir_name() failed");
+      return;
+    }
+    if(strcmp(dir,"-") == 0){
+        if(strcmp(smash.lastPWD,"")==0){
+          cerr << "smash error: cd: OLDPWD not set" << endl;
+          return;
+        }
+        dir = smash.lastPWD;
+    }
+    strcpy(smash.lastPWD,pwd);
+    if(chdir(dir) == -1){
+      perror("smash error: chdir() failed");
+    }
+    delete pwd;
+}
+
+/*********************jobs command************************/
+
+JobsCommand::JobsCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void JobsCommand::execute(){
+    SmallShell& smash = SmallShell::getInstance();
+    map<int, JobsList::JobEntry>::iterator it;
+    for(it = smash.jobs_list.jobsMap.begin(); it != smash.jobs_list.jobsMap.end(); it++){
+      if((it->second.status != STOPPED) || (it->second.status != UNFINISHED)){
+        continue;
+      }
+      std::cout << "[" << it->first << "] " << it->second.cmd << " : " << it->second.pid << " ";
+      time_t diff_time = difftime(it->second.add_time, time(NULL));
+      std::cout << diff_time << " secs";
+      if(it->second.status == STOPPED){
+        std::cout << " (stopped)";
+      }
+      std::cout << endl;
+    }
+}
 
 void JobsList::addJob(Command* cmd, bool isStopped){
   removeFinishedJobs(); //First delete all finished jobs
@@ -209,16 +267,13 @@ void JobsList::addJob(Command* cmd, bool isStopped){
   map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
   bool is_empty = jobs_map.empty(); //check if the jobs list is empty
   if(is_empty) {job_id = 1;}
-  else{job_id = jobs_map.rbegin() ->first +1;//returns the maximal job id since the map is sorted.
+  else{job_id = jobs_map.rbegin() ->first +1;}//returns the maximal job id since the map is sorted.
   //initialization
   jobs_map[job_id] = JobEntry();
   jobs_map[job_id].pid = cmd->pid;
   jobs_map[job_id].cmd = cmd->cmd_line;
   jobs_map[job_id].add_time = time(nullptr);
-
-  if(isStopped){jobs_map[job_id].status = STOPPED;}
-  else{jobs_map[job_id].status = UNFINISHED;}
-  }
+  jobs_map[job_id].status = (isStopped ? STOPPED : UNFINISHED);
 }
 
 void JobsList::removeFinishedJobs(){
@@ -241,7 +296,10 @@ bool isNumber(const string& str){
     if (std::isdigit(ch) == false) return false;
     return true;
   }
+  return false;
 }
+
+KillCommand::KillCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void KillCommand::execute(){
   int sig_num, job_id;
@@ -270,9 +328,11 @@ void KillCommand::execute(){
 
   int pid = it->second.pid;
 
-  cout<<"signal number "<<sig_num<<" was sent to pid "<<pid<<endl;
+  std::cout << "signal number " << sig_num << " was sent to pid " << pid << endl;
   smash.jobs_list.removeFinishedJobs();
 }
+
+ForegroundCommand::ForegroundCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
 
 void ForegroundCommand::execute(){
   if(args_num >= 3 || !isNumber(args[1])){
@@ -307,7 +367,7 @@ void ForegroundCommand::execute(){
 
     job = it->second;
   }
-    cout << job.cmd <<" : "<< job.pid <<endl;
+    std::cout << job.cmd <<" : "<< job.pid <<endl;
     if(kill(job.pid, SIGCONT) == -1){
       perror("smash error: kill failed");
       return;
@@ -342,6 +402,8 @@ JobsList::JobEntry* JobsList::getLastStoppedJob(int* jobId){
   return nullptr;
 }
 
+BackgroundCommand::BackgroundCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
 void BackgroundCommand::execute(){
   int target_job_id;
   JobsList::JobEntry target_job;
@@ -374,18 +436,19 @@ void BackgroundCommand::execute(){
       target_job = it->second;
   }
   else{
-    target_job = *smash.jobs_list.getLastStoppedJob(&target_job_id);
-    if(&target_job == nullptr){
+    JobsList::JobEntry* target_job_ptr = smash.jobs_list.getLastStoppedJob(&target_job_id);
+    if(target_job_ptr == nullptr){
       cerr<<"smash error: bg: there are no stopped jobs to resume"<<endl;
       return;
     }
+    target_job = *target_job_ptr;
   }
       
   if(target_job.status == UNFINISHED){
       cerr<<"smash error: bg: job-id" << target_job_id <<" is already running in the background"<<endl;
     }
   
-  cout<<target_job.cmd<<" : "<<target_job.pid<<endl;
+  std::cout<<target_job.cmd<<" : "<<target_job.pid<<endl;
   target_job.status = UNFINISHED;
 
   if(kill(target_job.pid, SIGCONT) == -1){
@@ -394,6 +457,8 @@ void BackgroundCommand::execute(){
     }
 }
 
+QuitCommand::QuitCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
 void QuitCommand::execute(){
   SmallShell& smash = SmallShell::getInstance();
   smash.jobs_list.removeFinishedJobs();
@@ -401,7 +466,7 @@ void QuitCommand::execute(){
   for( int i=1; i<args_num;i++){
     string arg = string(args[i]);
     if(arg == "kill"){
-      cout << "smash: sending SIGKILL signal to " << smash.jobs_list.jobsMap.size() << "jobs"<<endl;
+      std::cout << "smash: sending SIGKILL signal to " << smash.jobs_list.jobsMap.size() << " jobs"<<endl;
       smash.jobs_list.killAllJobs();
       break;
     }
@@ -412,10 +477,10 @@ void QuitCommand::execute(){
 void JobsList::killAllJobs(){
   SmallShell& smash = SmallShell::getInstance();
   map<int, JobsList::JobEntry> jobs_map = smash.jobs_list.jobsMap;
-  map<int, JobsList::JobEntry>::iterator it = jobsMap.begin();
+  map<int, JobsList::JobEntry>::iterator it;
   JobsList::JobEntry job;
-  for(it; it != jobs_map.end(); it++){
+  for(it = jobs_map.begin(); it != jobs_map.end(); it++){
     job = it->second;
-    cout<< job.pid << ": "<< job.cmd << endl;
+    std::cout<< job.pid << ": "<< job.cmd << endl;
   }
 }
