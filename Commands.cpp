@@ -136,9 +136,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("quit") == 0) {
     return new QuitCommand(cmd_line);
   }
-  /*else {
+  else {
     return new ExternalCommand(cmd_line);
-  }*/
+  }
   
   return nullptr;
 }
@@ -260,7 +260,7 @@ void JobsCommand::execute(){
     }
 }
 
-void JobsList::addJob(Command* cmd, bool isStopped){
+void JobsList::addJob(Command& cmd, bool isStopped){
   removeFinishedJobs(); //First delete all finished jobs
   int job_id;
   SmallShell& smash = SmallShell::getInstance();
@@ -270,8 +270,8 @@ void JobsList::addJob(Command* cmd, bool isStopped){
   else{job_id = jobs_map.rbegin() ->first +1;}//returns the maximal job id since the map is sorted.
   //initialization
   jobs_map[job_id] = JobEntry();
-  jobs_map[job_id].pid = cmd->pid;
-  jobs_map[job_id].cmd = cmd->cmd_line;
+  jobs_map[job_id].pid = cmd.pid;
+  jobs_map[job_id].cmd = cmd.cmd_line;
   jobs_map[job_id].add_time = time(nullptr);
   jobs_map[job_id].status = (isStopped ? STOPPED : UNFINISHED);
 }
@@ -482,5 +482,53 @@ void JobsList::killAllJobs(){
   for(it = jobs_map.begin(); it != jobs_map.end(); it++){
     job = it->second;
     std::cout<< job.pid << ": "<< job.cmd << endl;
+  }
+}
+
+ExternalCommand::ExternalCommand(const char* cmd_line) : Command(cmd_line){}
+
+void ExternalCommand::execute() {
+  SmallShell& smash = SmallShell::getInstance();
+  pid_t pid = fork();
+  if(pid == -1){
+    perror("smash error: fork failed");
+    return;
+  }
+  if(pid == 0){
+    if(setpgrp() == -1){
+      perror("smash error: setpgrp failed");
+      return;
+    }
+
+    char target_cmd[COMMAND_ARGS_MAX_LENGTH];
+    strcpy(target_cmd,cmd_line);
+
+    if(_isBackgroundComamnd(cmd_line)){_removeBackgroundSign(target_cmd);}
+
+    char  bash[]= "/bin/bash";
+    char  flag[] = "-c";
+
+    char* const bash_cmd[] = {bash, flag, (char*)target_cmd, nullptr};
+
+    if(execv("/bin/bash", bash_cmd) == -1){
+      perror("smash error: execv failed");
+      return;
+    }
+  }
+
+  else{
+    if(_isBackgroundComamnd(cmd_line)){
+      ExternalCommand ex_cmd = ExternalCommand(cmd_line);
+      smash.jobs_list.addJob( ex_cmd , false);
+    }
+
+    else{
+      //smash.jobs_list.fg_job_id = pid;
+      //smash.jobs_list.fgJob = JobsList::JobEntry(cmd_line);
+      if(waitpid(pid,NULL,WUNTRACED) == -1){
+        perror("smash error: waitpid failed");
+        return;
+      }
+    }
   }
 }

@@ -35,13 +35,13 @@ class BuiltInCommand : public Command {
   virtual ~BuiltInCommand() {}
 };
 
-/*class ExternalCommand : public Command {
+class ExternalCommand : public Command {
  public:
   ExternalCommand(const char* cmd_line);
   virtual ~ExternalCommand() {}
   void execute() override;
 };
-
+/*
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
@@ -121,13 +121,13 @@ public:
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
-
+/*
 class HeadCommand : public BuiltInCommand {
  public:
   HeadCommand(const char* cmd_line);
   virtual ~HeadCommand() {}
   void execute() override;
-};
+};*/
 
 class JobsList;
 class QuitCommand : public BuiltInCommand {
@@ -163,7 +163,7 @@ class JobsList {
  // TODO: Add your data members  public:
   JobsList();
   ~JobsList();
-  void addJob(Command* cmd, bool isStopped = false);//completed
+  void addJob(Command& cmd, bool isStopped = false);//completed
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();//completed
