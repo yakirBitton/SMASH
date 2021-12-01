@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define UNLISTED 2
@@ -41,7 +42,7 @@ class ExternalCommand : public Command {
   virtual ~ExternalCommand() {}
   void execute() override;
 };
-/*
+
 class PipeCommand : public Command {
   // TODO: Add your data members
  public:
@@ -58,7 +59,7 @@ class RedirectionCommand : public Command {
   void execute() override;
   //void prepare() override;
   //void cleanup() override;
-};*/
+};
 
 class ChangeDirCommand : public BuiltInCommand {
 // TODO: Add your data members 
@@ -121,13 +122,13 @@ public:
   virtual ~BackgroundCommand() {}
   void execute() override;
 };
-/*
+
 class HeadCommand : public BuiltInCommand {
  public:
   HeadCommand(const char* cmd_line);
   virtual ~HeadCommand() {}
   void execute() override;
-};*/
+};
 
 class JobsList;
 class QuitCommand : public BuiltInCommand {
@@ -150,11 +151,7 @@ class JobsList {
 	time_t stop_time;
 	int status;
 	
-    JobEntry(){
-      add_time = 0;
-      pid = 0;
-      status = UNFINISHED;
-    }
+    JobEntry();
   };
   int fg_job_id;
   JobEntry fgJob;
@@ -163,7 +160,7 @@ class JobsList {
  // TODO: Add your data members  public:
   JobsList();
   ~JobsList();
-  void addJob(Command& cmd, bool isStopped = false);//completed
+  void addJob(Command* cmd, bool isStopped = false);//completed
   void printJobsList();
   void killAllJobs();
   void removeFinishedJobs();//completed
@@ -179,6 +176,7 @@ class SmallShell {
     // TODO: Add your data members
     SmallShell();
  public:
+    std::set<std::string> built_in_cmd{"showpid", "pwd", "cd", "chprompt", "jobs", "kill", "fg", "bg", "quit"};
     std::string cmd_line;
     int smash_pid;//this is the smash pid
     JobsList jobs_list;
