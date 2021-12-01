@@ -136,6 +136,9 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
   else if (firstWord.compare("jobs") == 0) {
     return new JobsCommand(cmd_line);
   }
+  else if (firstWord.compare("head") == 0) {
+    return new HeadCommand(cmd_line);
+  }
   else if (firstWord.compare("kill") == 0) {
     return new KillCommand(cmd_line);
   }
@@ -178,6 +181,7 @@ Command::~Command(){
     }
     SmallShell& smash = SmallShell::getInstance();
     smash.jobs_list.fg_job_id = NO_FG_JOB;
+    smash.jobs_list.fgJob = smash.jobs_list.fgJob.createDummy();
 }
 /*********************built-in command********************/
 
@@ -267,17 +271,50 @@ void JobsCommand::execute(){
     smash.jobs_list.removeFinishedJobs();
     map<int, JobsList::JobEntry>::iterator it;
     for(it = smash.jobs_list.jobsMap.begin(); it != smash.jobs_list.jobsMap.end(); it++){
-      if((it->second.status != STOPPED) && (it->second.status != UNFINISHED)){
-        continue;
+      if((it->second.status == STOPPED) || (it->second.status == UNFINISHED)){
+        std::cout << "[" << it->first << "] " << it->second.cmd << " : " << it->second.pid << " ";
+        time_t diff_time = difftime(time(NULL), it->second.add_time);
+        std::cout << diff_time << " secs";
+        if(it->second.status == STOPPED){
+          std::cout << " (stopped)";
         }
-      std::cout << "[" << it->first << "] " << it->second.cmd << " : " << it->second.pid << " ";
-      time_t diff_time = difftime(time(NULL), it->second.add_time);
-      std::cout << diff_time << " secs";
-      if(it->second.status == STOPPED){
-        std::cout << " (stopped)";
+        std::cout << endl;
       }
-      std::cout << endl;
     }
+}
+
+/*********************jobs command************************/
+
+HeadCommand::HeadCommand(const char *cmd_line) : BuiltInCommand(cmd_line) {}
+
+void HeadCommand::execute(){
+    int rows_to_read;
+    ifstream infile;
+    if(args_num == 2){
+      rows_to_read = 10;
+      infile.open(args[1]);
+    }else{
+      if(args_num == 3){
+        rows_to_read = stoi(string(args[1]).substr(1, strlen(args[1])));
+        infile.open(args[2]);
+      }else{
+        return;
+      }
+    }
+    if(!infile.good()){
+        perror("smash error: open failed");
+        return;
+    }
+    string buffer;
+    for(int i = 0; i < rows_to_read; i++){
+      if(infile.eof()){
+          i = rows_to_read;
+          continue;
+      }
+      getline(infile, buffer);
+      cout << buffer << endl;
+    }
+    infile.close();
 }
 
 /*********************redirection command*****************/
@@ -341,6 +378,7 @@ void PipeCommand::execute(){
   strcpy(second_cmd_line, s2.c_str());
   Command* first_command = smash.CreateCommand(first_cmd_line);
   Command* second_command = smash.CreateCommand(second_cmd_line);
+  int out_pipe = (err_flag ? 2 : 1);
   int fdt[2];
   if(pipe(fdt) == -1){
     perror("smash error: pipe failed");
@@ -352,7 +390,12 @@ void PipeCommand::execute(){
     return;
   }
   if(first_child == 0){
-    if(dup2(fdt[1],(err_flag ? 2 : 1)) == -1){
+    if(setpgrp() == -1)
+    {
+        perror("smash error: setpgrp failed");
+        return;
+    }
+    if(dup2(fdt[1],out_pipe) == -1){
       perror("smash error: dup2 failed");
       return;
     }
@@ -362,9 +405,9 @@ void PipeCommand::execute(){
       first_command->execute();
       exit(0);
     }else{
-      char bash[] = "/bin/bash";
-      char flag[] = "-c";
-      char* const bash_cmd[] = {bash, flag, (char*) first_cmd_line, nullptr};
+      // char bash[] = "/bin/bash";
+      // char flag[] = "-c";
+      char* const bash_cmd[] = {(char*) "/bin/bash", (char *)"-c", (char*) first_cmd_line, nullptr};
       if(execv("/bin/bash", bash_cmd) == -1){
         perror("smash error: execv failed");
         return;
@@ -377,6 +420,11 @@ void PipeCommand::execute(){
     return;
   }
   if(second_child == 0){
+    if(setpgrp() == -1)
+    {
+        perror("smash error: setpgrp failed");
+        return;
+    }
     if(dup2(fdt[0],0) == -1){
       perror("smash error: dup2 failed");
       return;
@@ -387,9 +435,9 @@ void PipeCommand::execute(){
       second_command->execute();
       exit(0);
     }else{
-      char bash[] = "/bin/bash";
-      char flag[] = "-c";
-      char* const bash_cmd[] = {bash, flag, (char*)second_cmd_line, nullptr};
+      // char bash[] = "/bin/bash";
+      // char flag[] = "-c";
+      char* const bash_cmd[] = {(char*) "/bin/bash", (char *)"-c", (char*)second_cmd_line, nullptr};
       if(execv("/bin/bash", bash_cmd) == -1){
         perror("smash error: execv failed");
         return;
@@ -462,6 +510,15 @@ void ExternalCommand::execute() {
   }
 }
 
+JobsList::JobEntry JobsList::JobEntry::createDummy(){
+  JobEntry job;
+  job.add_time = -1;
+  job.cmd = "";
+  job.pid = -1;
+  job.status = NO_FG_JOB;
+  job.stop_time = -1;
+  return job;
+}
 
 void JobsList::addJob(Command* cmd, bool isStopped){
   removeFinishedJobs(); //First delete all finished jobs
@@ -542,6 +599,9 @@ void ForegroundCommand::execute(){
   if(args_num >= 3 || !isNumber(args[1])){
     cerr <<"smash error: fg: invalid arguments"<<endl;
   }
+  if(args_num == 1){
+    return;
+  }
 
   SmallShell& smash = SmallShell::getInstance();
   smash.jobs_list.removeFinishedJobs();
@@ -577,7 +637,7 @@ void ForegroundCommand::execute(){
       return;
     }
     smash.jobs_list.fgJob = job;
-    smash.jobs_list.fg_job_id = job.pid;
+    smash.jobs_list.fg_job_id = job_id;
     //now the job has moved to fg so it moves to unlistedMap
     /*map<int, JobsList::JobEntry>& unlisted_map = smash.jobs_list.unlistedMap;
     std::map<int, JobsList::JobEntry>::iterator unlisted_it;

@@ -152,6 +152,7 @@ class JobsList {
 	int status;
 	
     JobEntry();
+    JobEntry createDummy();
   };
   int fg_job_id;
   JobEntry fgJob;
