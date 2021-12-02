@@ -557,8 +557,12 @@ void JobsList::removeFinishedJobs(){
 }
 
 bool isNumber(const string& str){
-  for(char const &ch : str){
-    if (std::isdigit(ch) == false) return false;
+  int i = 0;
+  if(str[0] == '-'){
+    i++;
+  }
+  for(; str[i] != '/0';i++){
+    if (std::isdigit(str[i]) == false) return false;
     return true;
   }
   return false;
@@ -572,17 +576,17 @@ void KillCommand::execute(){
   smash.jobs_list.removeFinishedJobs();
   //check if the syntax is good
   if(args_num != 3 || !isNumber(string(args[1]).substr(1)) || !isNumber(args[2]) || args[1][0] != '-'){
-    cerr << "smash error: kill: invalid arguments" << endl;
-    return;
-  }
+      cerr << "smash error: kill: invalid arguments" << endl;
+      return;
+    }
+
   sig_num = stoi(string(args[1]).substr(1));
   job_id = stoi(args[2]);
-
   map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
   map<int, JobsList::JobEntry>::iterator it;
   it = jobs_map.find(job_id);
   if(it == jobs_map.end()){
-      cerr<<"smash error: kill: job_id " << job_id << " does not exist"<<endl;
+      cerr<<"smash error: kill: job-id " << job_id << " does not exist"<<endl;
       return;
   }
   int pid = it->second.pid;

@@ -28,7 +28,7 @@ void ctrlZHandler(int sig_num) {
     perror("smash error: kill failed");
     return;
   }
-  cout << "smash: proccess " << job.pid << " was stopped" << endl;
+  cout << "smash: process " << job.pid << " was stopped" << endl;
   smash.jobs_list.fgJob = job.createDummy();
   smash.jobs_list.fg_job_id = NO_FG_JOB;
 }
@@ -44,7 +44,7 @@ void ctrlCHandler(int sig_num) {
     perror("smash error: kill failed");
     return;
   }
-  cout << "smash: proccess " << smash.jobs_list.fgJob.pid << " was killed" << endl;
+  cout << "smash: process " << smash.jobs_list.fgJob.pid << " was killed" << endl;
   smash.jobs_list.fgJob = smash.jobs_list.fgJob.createDummy();
   smash.jobs_list.fg_job_id = NO_FG_JOB;
 }
