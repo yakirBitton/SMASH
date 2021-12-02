@@ -37,16 +37,15 @@ void ctrlCHandler(int sig_num) {
   // TODO: Add your implementation
   cout << "smash: got ctrl-C" << endl;
   SmallShell& smash = SmallShell::getInstance();
-  JobsList::JobEntry job = smash.jobs_list.fgJob;
-  if(job.pid == -1){
+  if(smash.jobs_list.fgJob.pid == -1){
     return;
   }
   if(killpg(smash.jobs_list.fgJob.pid, SIGKILL) == -1){
     perror("smash error: kill failed");
     return;
   }
-  cout << "smash: proccess " << job.pid << " was killed" << endl;
-  smash.jobs_list.fgJob = job.createDummy();
+  cout << "smash: proccess " << smash.jobs_list.fgJob.pid << " was killed" << endl;
+  smash.jobs_list.fgJob = smash.jobs_list.fgJob.createDummy();
   smash.jobs_list.fg_job_id = NO_FG_JOB;
 }
 

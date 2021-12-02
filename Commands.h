@@ -99,6 +99,14 @@ class JobsCommand : public BuiltInCommand {
   void execute() override;
 };
 
+class HeadCommand : public BuiltInCommand {
+ // TODO: Add your data members
+ public:
+  HeadCommand(const char* cmd_line);
+  virtual ~HeadCommand() {}
+  void execute() override;
+};
+
 class KillCommand : public BuiltInCommand {
  // TODO: Add your data members
  public:
@@ -120,13 +128,6 @@ class BackgroundCommand : public BuiltInCommand {
 public:
   BackgroundCommand(const char* cmd_line);
   virtual ~BackgroundCommand() {}
-  void execute() override;
-};
-
-class HeadCommand : public BuiltInCommand {
- public:
-  HeadCommand(const char* cmd_line);
-  virtual ~HeadCommand() {}
   void execute() override;
 };
 
@@ -177,7 +178,7 @@ class SmallShell {
     // TODO: Add your data members
     SmallShell();
  public:
-    std::set<std::string> built_in_cmd{"showpid", "pwd", "cd", "chprompt", "jobs", "kill", "fg", "bg", "quit"};
+    std::set<std::string> built_in_cmd{"showpid", "pwd", "cd", "chprompt", "jobs", "kill", "fg", "bg", "quit", "head"};
     std::string cmd_line;
     int smash_pid;//this is the smash pid
     JobsList jobs_list;
