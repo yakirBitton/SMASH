@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <sys/wait.h>
 #define COMMAND_ARGS_MAX_LENGTH (200)
 #define COMMAND_MAX_ARGS (20)
 #define UNLISTED 2

@@ -40,11 +40,14 @@ void ctrlCHandler(int sig_num) {
   if(smash.jobs_list.fgJob.pid == -1){
     return;
   }
-  if(killpg(smash.jobs_list.fgJob.pid, SIGKILL) == -1){
-    perror("smash error: kill failed");
-    return;
+  int wstatus = 0;
+  if(waitpid(smash.jobs_list.fgJob.pid, &wstatus, WNOHANG) != smash.jobs_list.fgJob.pid){
+    if(killpg(smash.jobs_list.fgJob.pid, SIGKILL) == -1){
+      perror("smash error: kill failed");
+      return;
+    }
+    cout << "smash: process " << smash.jobs_list.fgJob.pid << " was killed" << endl;
   }
-  cout << "smash: process " << smash.jobs_list.fgJob.pid << " was killed" << endl;
   smash.jobs_list.fgJob = smash.jobs_list.fgJob.createDummy();
   smash.jobs_list.fg_job_id = NO_FG_JOB;
 }

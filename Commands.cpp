@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 #include <sstream>
-#include <sys/wait.h>
 #include <iomanip>
 #include <time.h>
 #include <fstream>
@@ -116,6 +115,10 @@ Command * SmallShell::CreateCommand(const char* cmd_line) {
 	// For example:
   string cmd_s = _trim(string(cmd_line));
   string firstWord = cmd_s.substr(0, cmd_s.find_first_of(" \n"));
+  if(built_in_cmd.count(firstWord.substr(0,firstWord.length()-1))==1 && firstWord[firstWord.length()-1] == '&'){
+    firstWord = firstWord.substr(0,firstWord.length()-1);
+  }
+  
   
   if(string(cmd_line).find("|") != string::npos){
 		return new PipeCommand(cmd_line);
@@ -377,23 +380,24 @@ void PipeCommand::execute(){
   char first_cmd_line[COMMAND_ARGS_MAX_LENGTH];
   strcpy(first_cmd_line, s.c_str());
   SmallShell& smash = SmallShell::getInstance();
-  string s2 = _trim(string(cmd_line).substr(pos + (err_flag ? 2 : 1), strlen(cmd_line)-1));  
+  int out_pipe = (err_flag ? 2 : 1);
+  string s2 = _trim(string(cmd_line).substr(pos + out_pipe, strlen(cmd_line)));  
   char second_cmd_line[COMMAND_ARGS_MAX_LENGTH];
   strcpy(second_cmd_line, s2.c_str());
   Command* first_command = smash.CreateCommand(first_cmd_line);
   Command* second_command = smash.CreateCommand(second_cmd_line);
-  int out_pipe = (err_flag ? 2 : 1);
+  smash.jobs_list.removeFinishedJobs();
   int fdt[2];
   if(pipe(fdt) == -1){
     perror("smash error: pipe failed");
     return;
   }
-  int first_child = fork();
-  if(first_child == -1){
+  int first_child_pid = fork();
+  if(first_child_pid == -1){
     perror("smash error: fork failed");
     return;
   }
-  if(first_child == 0){
+  if(first_child_pid == 0){
     if(setpgrp() == -1)
     {
         perror("smash error: setpgrp failed");
@@ -405,6 +409,7 @@ void PipeCommand::execute(){
     }
     close(fdt[0]);
     close(fdt[1]);
+    
     if(smash.built_in_cmd.count(first_command->args[0]) == 1){
       first_command->execute();
       exit(0);
@@ -418,12 +423,12 @@ void PipeCommand::execute(){
       }
     }
   }
-  int second_child = fork();
-  if(second_child == -1){
+  int second_child_pid = fork();
+  if(second_child_pid == -1){
     perror("smash error: fork failed");
     return;
   }
-  if(second_child == 0){
+  if(second_child_pid == 0){
     if(setpgrp() == -1)
     {
         perror("smash error: setpgrp failed");
@@ -448,16 +453,16 @@ void PipeCommand::execute(){
       }
     }
   }
-  if(waitpid(first_child, nullptr, 0) == -1){
-      perror("smash error: waitpid failed");
-      exit(0);
-  }
-  if(waitpid(second_child, nullptr, 0) == -1){
-      perror("smash error: waitpid failed");
-      exit(0);
-  }
   close(fdt[0]);
-  close(fdt[1]);    
+  close(fdt[1]); 
+  if(waitpid(first_child_pid, nullptr, 0) == -1){
+      perror("smash error: waitpid failed");
+      exit(0);
+  }
+  if(waitpid(second_child_pid, nullptr, 0) == -1){
+      perror("smash error: waitpid failed");
+      exit(0);
+  }   
 }
 
 /*********************external command************************/
@@ -510,6 +515,8 @@ void ExternalCommand::execute() {
         perror("smash error: waitpid failed");
         return;
       }
+      smash.jobs_list.fg_job_id = NO_FG_JOB;
+      smash.jobs_list.fgJob = smash.jobs_list.fgJob.createDummy();
     }
   }
 }
@@ -541,6 +548,7 @@ void JobsList::addJob(Command* cmd, bool isStopped){
 }
 
 void JobsList::removeFinishedJobs(){
+  cout << "enters finished jobs" << endl;
   SmallShell& smash = SmallShell::getInstance();
   map<int, JobsList::JobEntry>& jobs_map = smash.jobs_list.jobsMap;
   //map<int, JobsList::JobEntry>::iterator = jobs_map.begin();
@@ -548,8 +556,11 @@ void JobsList::removeFinishedJobs(){
   JobsList::JobEntry job_entry = it->second;
 
   while(it != jobs_map.end()){
-    if(waitpid(it->second.pid, nullptr, WNOHANG) == it->second.pid){
+    int wait_pid = waitpid(it->second.pid, nullptr, WNOHANG), sec_pid = it->second.pid;
+    cout<< wait_pid << "   ?==   " << sec_pid << endl;
+    if(wait_pid == sec_pid){
       it = jobs_map.erase(it);
+      cout << "enters if in while" << endl;
       //it = jobs_map.begin();
     }
     else{++it;}
@@ -557,11 +568,11 @@ void JobsList::removeFinishedJobs(){
 }
 
 bool isNumber(const string& str){
-  int i = 0;
+  size_t i = 0;
   if(str[0] == '-'){
     i++;
   }
-  for(; str[i] != '/0';i++){
+  for(; i < str.length();i++){
     if (std::isdigit(str[i]) == false) return false;
     return true;
   }
@@ -703,7 +714,7 @@ void BackgroundCommand::execute(){
         }
       }
       if(it == jobs_map.rend()){
-      cerr<<"smash error: bg: job-id " << target_job_id << "does not exist"<<endl;
+      cerr<<"smash error: bg: job-id " << target_job_id << " does not exist"<<endl;
       return;
       }
   }
@@ -721,7 +732,7 @@ void BackgroundCommand::execute(){
   }
       
   if(it->second.status == UNFINISHED){
-      cerr<<"smash error: bg: job-id" << target_job_id <<" is already running in the background"<<endl;
+      cerr<<"smash error: bg: job-id " << target_job_id <<" is already running in the background"<<endl;
       return;
     }
   
@@ -745,7 +756,7 @@ void QuitCommand::execute(){
     if(arg == "kill"){
       std::cout << "smash: sending SIGKILL signal to " << smash.jobs_list.jobsMap.size() << " jobs:"<<endl;
       smash.jobs_list.killAllJobs();
-      break;
+      exit(0);
     }
   }
   exit(0);
